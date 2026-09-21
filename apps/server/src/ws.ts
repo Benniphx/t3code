@@ -138,6 +138,7 @@ import { linkCreatedPullRequest } from "./git/linkCreatedPullRequest.ts";
 import * as ReviewService from "./review/ReviewService.ts";
 import * as ProjectSetupScriptRunner from "./project/ProjectSetupScriptRunner.ts";
 import * as ProjectCloneTracker from "./project/ProjectCloneTracker.ts";
+import * as JevTurnRouter from "./jevTurnRouter.ts";
 import * as RepositoryIdentityResolver from "./project/RepositoryIdentityResolver.ts";
 import * as WorktreeSetupTracker from "./project/WorktreeSetupTracker.ts";
 import * as AgentSessionScanner from "./project/AgentSessionScanner.ts";
@@ -566,6 +567,7 @@ const makeWsRpcLayer = (
       const providerAuth = yield* ProviderAuthService;
       const providerInstances = yield* ProviderInstanceRegistry;
       const providerInstallation = yield* makeProviderInstallation();
+      const jevTurnRouter = yield* JevTurnRouter.makeJevTurnRouter;
       const serverUpdate = yield* ServerSelfUpdate.ServerSelfUpdate;
       const config = yield* ServerConfig.ServerConfig;
       const lifecycleEvents = yield* ServerLifecycleEvents.ServerLifecycleEvents;
@@ -733,6 +735,33 @@ const makeWsRpcLayer = (
       const serverEventId = randomUUID.pipe(Effect.map(EventId.make));
       const serverCommandId = (tag: string) =>
         randomUUID.pipe(Effect.map((uuid) => CommandId.make(`server:${tag}:${uuid}`)));
+      const appendJevRoutingActivity = (
+        command: Extract<OrchestrationCommand, { type: "thread.turn.start" }>,
+        activity: JevTurnRouter.JevRoutingActivity,
+      ) =>
+        Effect.all({
+          commandId: serverCommandId("jev-turn-routing-activity"),
+          activityId: serverEventId,
+          createdAt: nowIso,
+        }).pipe(
+          Effect.flatMap(({ commandId, activityId, createdAt }) =>
+            dispatchFromClient({
+              type: "thread.activity.append",
+              commandId,
+              threadId: command.threadId,
+              activity: {
+                id: activityId,
+                tone: activity.status === "fallback" ? "error" : "info",
+                kind: "jev.turn-routing",
+                summary: JevTurnRouter.jevRoutingSummary(activity),
+                payload: activity,
+                turnId: null,
+                createdAt,
+              },
+              createdAt,
+            }),
+          ),
+        );
 
       const loadAuthAccessSnapshot = () =>
         Effect.all({
@@ -1733,32 +1762,43 @@ const makeWsRpcLayer = (
 
       const dispatchNormalizedCommand = (
         normalizedCommand: OrchestrationCommand,
-      ): Effect.Effect<{ readonly sequence: number }, OrchestrationDispatchCommandError> => {
-        const dispatchEffect =
-          normalizedCommand.type === "thread.turn.start" && normalizedCommand.bootstrap
-            ? dispatchBootstrapTurnStart(normalizedCommand)
-            : dispatchFromClient(normalizedCommand).pipe(
-                Effect.tap(({ sequence }) =>
-                  // Returning from thread.create is the handoff point at which
-                  // clients may start resources for the new incarnation. Use
-                  // its event sequence as the exact deletion-cleanup fence.
-                  normalizedCommand.type === "thread.create"
-                    ? threadDeletionReactor.drainThrough(sequence)
-                    : Effect.void,
-                ),
-                Effect.mapError((cause) =>
-                  toDispatchCommandError(cause, "Failed to dispatch orchestration command"),
-                ),
-              );
-
-        return startup
-          .enqueueCommand(dispatchEffect)
+      ): Effect.Effect<{ readonly sequence: number }, OrchestrationDispatchCommandError> =>
+        startup
+          .enqueueCommand(
+            Effect.gen(function* () {
+              const routing =
+                normalizedCommand.type === "thread.turn.start"
+                  ? yield* jevTurnRouter.routeTurn(normalizedCommand)
+                  : null;
+              const command = routing?.command ?? normalizedCommand;
+              const result = yield* command.type === "thread.turn.start" && command.bootstrap
+                ? dispatchBootstrapTurnStart(command)
+                : dispatchFromClient(command).pipe(
+                    Effect.tap(({ sequence }) =>
+                      // Returning from thread.create is the handoff point at which
+                      // clients may start resources for the new incarnation. Use
+                      // its event sequence as the exact deletion-cleanup fence.
+                      command.type === "thread.create"
+                        ? threadDeletionReactor.drainThrough(sequence)
+                        : Effect.void,
+                    ),
+                    Effect.mapError((cause) =>
+                      toDispatchCommandError(cause, "Failed to dispatch orchestration command"),
+                    ),
+                  );
+              if (routing?.activity) {
+                yield* appendJevRoutingActivity(routing.command, routing.activity).pipe(
+                  Effect.ignoreCause({ log: false }),
+                );
+              }
+              return result;
+            }),
+          )
           .pipe(
             Effect.mapError((cause) =>
               toDispatchCommandError(cause, "Failed to dispatch orchestration command"),
             ),
           );
-      };
 
       // Only clients that answer /usage-limits themselves see it in the catalogs;
       // an older client would send the injected command to the provider.
