@@ -16,6 +16,7 @@
 - [Devices](./user/devices.md)
 - [Usage and limits](./user/usage.md)
 - [Jev turn routing](./user/jev-turn-routing.md)
+- [Jev desktop pilot](./operations/jev-turn-routing-pilot.md)
 - [Product usage data](./user/telemetry.md)
 - [Remote access](./user/remote-access.md)
 - [Running in the background](./user/background-service.md)
