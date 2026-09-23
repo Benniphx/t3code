@@ -17,11 +17,15 @@ scripts/build-jev-macos-pilot.sh
 The script runs the focused router tests, server typecheck, targeted lint and
 format checks, builds the ARM64 DMG/ZIP, installs a separate ad-hoc-signed app
 under `~/Applications`, and verifies that its embedded commit matches `HEAD`.
-The app uses its own bundle identity and `~/.t3-jev` state root, so launching it
-directly from Finder starts the bundled local backend instead of inheriting the
-installed app's saved Server Connector. It refuses to overwrite an existing
-pilot app. Set `T3CODE_JEV_APP_PATH` to choose another unused destination, or
-`T3CODE_JEV_HOME` to choose another isolated state root when starting it.
+The app uses its own bundle identity and a signed `LSEnvironment` entry for the
+`~/.t3-jev` state root, so launching it directly from Finder starts the bundled
+local backend instead of inheriting the installed app's saved Server Connector.
+The native Electron executable remains the bundle executable; wrapping or
+renaming it makes Electron abort during `ElectronMain` on macOS. The builder
+verifies this package invariant before succeeding. It refuses to overwrite an
+existing pilot app. Set `T3CODE_JEV_APP_PATH` to choose another unused
+destination, or `T3CODE_JEV_HOME` to choose another isolated state root while
+building and starting it.
 
 ## Configure the local secret scope
 

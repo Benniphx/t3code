@@ -27,7 +27,6 @@ fi
 export PATH="${HOME}/.cargo/bin:${PATH}"
 
 vp test run apps/server/src/jevTurnRouter.test.ts
-zsh scripts/t3-code-jev-standalone-launcher.test.sh
 vp run --filter t3 typecheck
 vp lint apps/server/src/jevTurnRouter.ts apps/server/src/jevTurnRouter.test.ts apps/server/src/ws.ts
 vp fmt --check apps/server/src/jevTurnRouter.ts apps/server/src/jevTurnRouter.test.ts apps/server/src/ws.ts docs/user/jev-turn-routing.md docs/operations/jev-turn-routing-pilot.md
@@ -57,29 +56,19 @@ mv "$stage_dir/T3 Code (Alpha).app" "$target"
 
 macos_dir="$target/Contents/MacOS"
 plist="$target/Contents/Info.plist"
-mv "$macos_dir/T3 Code (Alpha)" "$macos_dir/T3 Code Jev Backend"
-cp "$repo_root/scripts/t3-code-jev-standalone-launcher.sh" "$macos_dir/T3 Code (Alpha)"
-chmod +x "$macos_dir/T3 Code (Alpha)" "$macos_dir/T3 Code Jev Backend"
+standalone_home="${T3CODE_JEV_HOME:-${HOME}/.t3-jev}"
 /usr/libexec/PlistBuddy -c 'Set :CFBundleIdentifier com.benniphx.t3code.jev' "$plist"
 /usr/libexec/PlistBuddy -c 'Set :CFBundleName T3 Code Jev' "$plist"
 /usr/libexec/PlistBuddy -c 'Set :CFBundleDisplayName T3 Code Jev' "$plist"
+/usr/libexec/PlistBuddy -c "Add :LSEnvironment:T3CODE_HOME string $standalone_home" "$plist"
+/usr/libexec/PlistBuddy -c 'Add :LSEnvironment:T3CODE_DISABLE_AUTO_UPDATE string 1' "$plist"
 
 codesign --force --deep --sign - "$target"
-codesign --verify --deep --strict "$target"
+scripts/verify-jev-macos-pilot-app.sh "$target" "$standalone_home"
 
 embedded_commit="$(strings "$target/Contents/Resources/app.asar" | sed -nE 's/.*"t3codeCommitHash": "([0-9a-f]+)".*/\1/p' | head -1)"
 if [[ "$embedded_commit" != "$short_commit" ]]; then
   print -u2 "Embedded commit mismatch: expected $short_commit, found ${embedded_commit:-missing}."
-  exit 1
-fi
-
-if [[ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$plist")" != "com.benniphx.t3code.jev" ]]; then
-  print -u2 "Standalone bundle identifier was not applied."
-  exit 1
-fi
-
-if ! grep -Fq 'T3CODE_HOME=' "$macos_dir/T3 Code (Alpha)"; then
-  print -u2 "Standalone launcher is missing from the packaged app."
   exit 1
 fi
 
