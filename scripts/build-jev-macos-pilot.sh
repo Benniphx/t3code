@@ -57,13 +57,15 @@ mv "$stage_dir/T3 Code (Alpha).app" "$target"
 macos_dir="$target/Contents/MacOS"
 plist="$target/Contents/Info.plist"
 standalone_home="${T3CODE_JEV_HOME:-${HOME}/.t3-jev}"
+standalone_user_data="${T3CODE_JEV_USER_DATA_PATH:-${HOME}/Library/Application Support/t3code-jev}"
 /usr/libexec/PlistBuddy -c 'Set :CFBundleIdentifier com.benniphx.t3code.jev' "$plist"
 /usr/libexec/PlistBuddy -c 'Set :CFBundleDisplayName T3 Code Jev' "$plist"
 /usr/libexec/PlistBuddy -c "Add :LSEnvironment:T3CODE_HOME string $standalone_home" "$plist"
+/usr/libexec/PlistBuddy -c "Add :LSEnvironment:T3CODE_DESKTOP_USER_DATA_PATH string $standalone_user_data" "$plist"
 /usr/libexec/PlistBuddy -c 'Add :LSEnvironment:T3CODE_DISABLE_AUTO_UPDATE string 1' "$plist"
 
 codesign --force --deep --sign - "$target"
-scripts/verify-jev-macos-pilot-app.sh "$target" "$standalone_home"
+scripts/verify-jev-macos-pilot-app.sh "$target" "$standalone_home" "$standalone_user_data"
 
 embedded_commit="$(strings "$target/Contents/Resources/app.asar" | sed -nE 's/.*"t3codeCommitHash": "([0-9a-f]+)".*/\1/p' | head -1)"
 if [[ "$embedded_commit" != "$short_commit" ]]; then

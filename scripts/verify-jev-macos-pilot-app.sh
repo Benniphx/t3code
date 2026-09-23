@@ -3,6 +3,7 @@ set -euo pipefail
 
 app_path="${1:-}"
 expected_home="${2:-${HOME}/.t3-jev}"
+expected_user_data="${3:-${HOME}/Library/Application Support/t3code-jev}"
 
 if [[ -z "$app_path" || ! -d "$app_path/Contents/MacOS" ]]; then
   print -u2 "Usage: $0 <app-path> [expected-t3-home]"
@@ -33,6 +34,11 @@ fi
 
 if [[ "$(/usr/libexec/PlistBuddy -c 'Print :LSEnvironment:T3CODE_HOME' "$plist")" != "$expected_home" ]]; then
   print -u2 "Standalone T3 home is missing from LSEnvironment."
+  exit 1
+fi
+
+if [[ "$(/usr/libexec/PlistBuddy -c 'Print :LSEnvironment:T3CODE_DESKTOP_USER_DATA_PATH' "$plist")" != "$expected_user_data" ]]; then
+  print -u2 "Standalone Electron userData path is missing from LSEnvironment."
   exit 1
 fi
 

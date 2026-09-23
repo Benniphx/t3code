@@ -145,6 +145,25 @@ const withIdentity = <A, E, R>(
 };
 
 describe("DesktopAppIdentity", () => {
+  it.effect("uses an explicit userData path before probing legacy state", () =>
+    withIdentity(
+      Effect.gen(function* () {
+        const identity = yield* DesktopAppIdentity.DesktopAppIdentity;
+        const userDataPath = yield* identity.resolveUserDataPath;
+
+        assert.equal(userDataPath, "/Users/alice/Library/Application Support/t3code-jev");
+      }),
+      {
+        legacyPathExists: true,
+        environment: {
+          env: {
+            T3CODE_DESKTOP_USER_DATA_PATH: " /Users/alice/Library/Application Support/t3code-jev ",
+          },
+        },
+      },
+    ),
+  );
+
   it.effect("keeps using the legacy userData path when it already exists", () =>
     withIdentity(
       Effect.gen(function* () {

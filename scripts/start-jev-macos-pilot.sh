@@ -46,6 +46,7 @@ done < <(
 export T3CODE_JEV_MODE="$mode"
 export T3CODE_JEV_API_KEY="$jev_key"
 export T3CODE_HOME="${T3CODE_JEV_HOME:-${HOME}/.t3-jev}"
+export T3CODE_DESKTOP_USER_DATA_PATH="${T3CODE_JEV_USER_DATA_PATH:-${HOME}/Library/Application Support/t3code-jev}"
 export T3CODE_DISABLE_AUTO_UPDATE=1
 unset VITE_DEV_SERVER_URL
 unset jev_key
