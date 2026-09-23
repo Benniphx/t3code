@@ -13,9 +13,16 @@ plist="$app_path/Contents/Info.plist"
 executable_name="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$plist")"
 executable_path="$app_path/Contents/MacOS/$executable_name"
 executable_type="$(file -b "$executable_path")"
+bundle_name="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleName' "$plist")"
+helper_path="$app_path/Contents/Frameworks/$bundle_name Helper.app"
 
 if [[ "$executable_type" != *"Mach-O 64-bit executable arm64"* ]]; then
   print -u2 "CFBundleExecutable must point directly at the native ARM64 Electron executable, found: $executable_type"
+  exit 1
+fi
+
+if [[ ! -d "$helper_path" ]]; then
+  print -u2 "CFBundleName must resolve to the packaged Electron helper app, missing: $helper_path"
   exit 1
 fi
 

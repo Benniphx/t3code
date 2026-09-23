@@ -21,11 +21,13 @@ The app uses its own bundle identity and a signed `LSEnvironment` entry for the
 `~/.t3-jev` state root, so launching it directly from Finder starts the bundled
 local backend instead of inheriting the installed app's saved Server Connector.
 The native Electron executable remains the bundle executable; wrapping or
-renaming it makes Electron abort during `ElectronMain` on macOS. The builder
-verifies this package invariant before succeeding. It refuses to overwrite an
-existing pilot app. Set `T3CODE_JEV_APP_PATH` to choose another unused
-destination, or `T3CODE_JEV_HOME` to choose another isolated state root while
-building and starting it.
+renaming it makes Electron abort during `ElectronMain` on macOS. `CFBundleName`
+also remains aligned with the packaged Electron helper-app names; changing only
+the display name avoids Electron's `Unable to find helper app` fatal startup
+check. The builder verifies both package invariants before succeeding. It
+refuses to overwrite an existing pilot app. Set `T3CODE_JEV_APP_PATH` to choose
+another unused destination, or `T3CODE_JEV_HOME` to choose another isolated
+state root while building and starting it.
 
 ## Configure the local secret scope
 
