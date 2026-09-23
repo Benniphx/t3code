@@ -17,8 +17,11 @@ scripts/build-jev-macos-pilot.sh
 The script runs the focused router tests, server typecheck, targeted lint and
 format checks, builds the ARM64 DMG/ZIP, installs a separate ad-hoc-signed app
 under `~/Applications`, and verifies that its embedded commit matches `HEAD`.
-It refuses to overwrite an existing pilot app. Set `T3CODE_JEV_APP_PATH` to
-choose another unused destination.
+The app uses its own bundle identity and `~/.t3-jev` state root, so launching it
+directly from Finder starts the bundled local backend instead of inheriting the
+installed app's saved Server Connector. It refuses to overwrite an existing
+pilot app. Set `T3CODE_JEV_APP_PATH` to choose another unused destination, or
+`T3CODE_JEV_HOME` to choose another isolated state root when starting it.
 
 ## Configure the local secret scope
 
@@ -46,7 +49,7 @@ replace, or use a T3 background service, and do not create a substitute thread
 on another environment. Then start the separate build:
 
 ```bash
-scripts/start-jev-macos-pilot.sh shadow "$HOME/Applications/T3 Code Jev <commit>.app"
+scripts/start-jev-macos-pilot.sh shadow "$HOME/Applications/T3 Code Jev Standalone <commit>.app"
 ```
 
 Keep the existing project and thread on the visible `Local` environment.
@@ -58,7 +61,7 @@ After enough correct shadow recommendations, quit the desktop app and restart
 the same build in apply mode:
 
 ```bash
-scripts/start-jev-macos-pilot.sh apply "$HOME/Applications/T3 Code Jev <commit>.app"
+scripts/start-jev-macos-pilot.sh apply "$HOME/Applications/T3 Code Jev Standalone <commit>.app"
 ```
 
 Apply routing is per turn, not per thread. Confidence of at least `0.85`

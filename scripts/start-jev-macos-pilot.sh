@@ -5,7 +5,7 @@ mode="${1:-}"
 app_path="${2:-}"
 secret_file="${T3CODE_JEV_SECRET_FILE:-}"
 secret_name="${T3CODE_JEV_SECRET_NAME:-}"
-log_file="${T3CODE_JEV_LOG_FILE:-${HOME}/Library/Logs/T3 Code Jev ${mode}.log}"
+log_file="${T3CODE_JEV_LOG_FILE:-${HOME}/Library/Logs/T3 Code Jev Standalone ${mode}.log}"
 
 if [[ "$mode" != "shadow" && "$mode" != "apply" ]]; then
   print -u2 "Usage: T3CODE_JEV_SECRET_FILE=... T3CODE_JEV_SECRET_NAME=... $0 <shadow|apply> <app-path>"
